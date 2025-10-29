@@ -1,0 +1,223 @@
+Create a complete React-based video management interface for a beauty salon consultation tool with the following requirements:
+
+## CORE FEATURES:
+
+1. **Video Player Section**
+   - Full-width responsive video player using react-player
+   - Standard playback controls (play, pause, volume, fullscreen)
+   - Current timestamp display
+   - Progress bar with seek functionality
+
+2. **Interactive Timeline Bar** (directly below video player)
+   - Horizontal timeline divided into colored segments representing different topics
+   - Each segment displays:
+     * Topic name (truncated if needed)
+     * Time range (e.g., "0:00 - 5:30")
+   - Hover behavior:
+     * Show detailed tooltip with full topic name, description, and keywords
+     * Highlight the segment
+   - Click behavior:
+     * Jump video to that segment's start time
+   - Color-code segments (use pleasant colors: #E8F4F8, #FFE5E5, #FFF4E5, #E8F8E8)
+
+3. **Transcript Panel** (scrollable sidebar or section)
+   - Display full transcript with:
+     * Timestamp badge (e.g., [02:45])
+     * Speaker label (colored badge: Speaker A, Speaker B)
+     * Transcript text
+   - Features:
+     * Auto-scroll to current playing position
+     * Click any line to jump video to that timestamp
+     * Highlight current speaking line
+     * Search functionality (bonus)
+
+4. **Summary & Report Section** (collapsible panels)
+   - Meeting Summary card:
+     * 2-3 paragraph AI-generated overview
+     * Key highlights as bullet points
+   
+   - Detailed Report card with tabs:
+     * Tab 1 - Topics Discussed: List main topics with icons
+     * Tab 2 - Partial Topics: Topics mentioned but not completed
+     * Tab 3 - Speakers: Speaker analysis with speaking time pie chart
+     * Tab 4 - Decisions & Actions: Key decisions and action items
+
+5. **Upload Section** (initial state before video is loaded)
+   - Drag-and-drop zone
+   - File browser button
+   - Accept only video formats (.mp4, .mov, .avi, .mkv)
+   - Show processing progress with steps:
+     * Extracting audio... ✓
+     * Transcribing... ✓
+     * Identifying speakers... ✓
+     * AI Analysis... ✓
+
+## DESIGN SPECIFICATIONS:
+
+**Layout:**
+- Modern, clean interface with card-based design
+- Use a two-column layout on desktop (video/timeline on left 70%, transcript on right 30%)
+- Responsive mobile layout (stack vertically)
+- Sticky video player when scrolling
+- Smooth animations and transitions
+
+**Color Scheme:**
+- Primary: #AF4C0F (terracotta)
+- Secondary: #582308 (dark brown)
+- Background: #FAFAFA
+- Cards: White with subtle shadow
+- Accent colors for timeline segments
+
+**Typography:**
+- Headers: Clean sans-serif (Inter, Poppins)
+- Body: Readable font (size 14-16px)
+- Monospace for timestamps
+
+**Components Styling:**
+- Rounded corners (8px)
+- Subtle shadows for depth
+- Smooth hover effects
+- Loading skeletons while processing
+
+## TECHNICAL REQUIREMENTS:
+
+**React Structure:**
+```
+VideoManager/
+├── VideoUpload (drag-drop component)
+├── VideoPlayer (react-player wrapper)
+├── Timeline (interactive segments bar)
+├── TranscriptPanel (scrollable with click-to-seek)
+├── SummaryCard (collapsible)
+├── ReportTabs (tabbed interface)
+└── ProcessingModal (progress indicator)
+```
+
+**State Management:**
+- videoUrl: Current video file URL
+- currentTime: Video playback position
+- transcript: Array of {speaker, text, start, end, timestamp}
+- segments: Array of {topic, description, startTime, endTime, keywords}
+- analysis: {summary, mainTopics, speakers, decisions}
+- isProcessing: Boolean for upload state
+- processingStep: Current processing step name
+
+**Key Functions:**
+```javascript
+handleVideoUpload(file) - Process uploaded video
+seekToTime(seconds) - Jump video to timestamp
+handleTimelineHover(segment) - Show tooltip
+handleTimelineClick(segment) - Seek to segment
+handleTranscriptClick(line) - Seek to transcript line
+```
+
+**Sample Data Structure:**
+```javascript
+const sampleData = {
+  segments: [
+    {
+      topic: "Introduction & Client Assessment",
+      description: "Welcome client, discuss needs and goals",
+      startTime: 0,
+      endTime: 300,
+      keywords: ["welcome", "needs", "goals"]
+    },
+    {
+      topic: "Hair Treatment Discussion",
+      description: "Review keratin treatment options and benefits",
+      startTime: 300,
+      endTime: 720,
+      keywords: ["keratin", "smoothing", "treatment"]
+    }
+  ],
+  transcript: [
+    {
+      speaker: "SPEAKER_00",
+      text: "Welcome to the salon! How can we help you today?",
+      start: 2.5,
+      end: 5.8,
+      timestamp: 2.5
+    }
+  ],
+  analysis: {
+    summary: "This 30-minute consultation covered hair treatments...",
+    mainTopics: ["Hair treatments", "Skincare routine"],
+    speakers: [
+      {
+        name: "SPEAKER_00",
+        role: "Consultant",
+        speakingTime: 1200
+      }
+    ]
+  }
+}
+```
+
+## INTERACTIONS:
+
+1. **Timeline hover**: Show animated tooltip with segment info
+2. **Timeline click**: Smooth seek with visual feedback
+3. **Transcript click**: Highlight line and jump video
+4. **Auto-scroll transcript**: As video plays, auto-scroll to current line
+5. **Segment highlighting**: Highlight current segment in timeline based on video time
+
+## ADDITIONAL FEATURES:
+
+- Export transcript as PDF/TXT button
+- Share button to copy link
+- Playback speed control (0.5x, 1x, 1.5x, 2x)
+- Keyboard shortcuts (Space = play/pause, ← → = seek)
+- Dark mode toggle (bonus)
+
+## LIBRARIES TO USE:
+
+- react-player for video
+- Tailwind CSS or styled-components for styling
+- lucide-react or react-icons for icons
+- recharts for speaker time visualization (pie chart)
+- react-tooltip for hover tooltips
+
+Please create:
+1. Complete React component code with all features
+2. Styled using Tailwind CSS classes
+3. Fully functional with sample data
+4. Responsive design
+5. Clean, commented code
+6. Use modern React hooks (useState, useRef, useEffect)
+
+Make it production-ready, beautiful, and highly interactive!
+```
+
+---
+
+## 🎯 Alternative Shorter Prompt (If you want just the artifact):
+```
+Create an interactive video management React app for beauty salon consultations with:
+
+1. Video player (react-player) with controls
+2. Color-coded timeline segments below video - hover shows topic details, click jumps to that time
+3. Scrollable transcript sidebar - click any line to jump video to that moment, auto-highlight current line
+4. Summary section with AI-generated overview
+5. Report tabs showing: Topics Discussed, Speakers (with pie chart), Key Decisions
+
+Design: Modern terracotta theme (#AF4C0F, #582308), card-based layout, smooth animations
+
+Features: 
+- Upload video with drag-drop
+- Processing progress indicator
+- Seek to any timestamp by clicking timeline or transcript
+- Auto-scroll transcript as video plays
+- Responsive mobile/desktop layout
+
+Use: React, Tailwind CSS, react-player, lucide-react icons, recharts
+
+Include sample data and make it fully functional!
+```
+
+---
+
+## 📋 Or Ask Me Directly:
+
+Since I can create artifacts, you can also just ask me:
+```
+"Create the video management UI with interactive timeline, transcript panel, and summary sections using the specifications we discussed"
