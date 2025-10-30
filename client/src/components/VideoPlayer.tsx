@@ -12,6 +12,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+interface ReactPlayerInstance {
+  seekTo: (amount: number, type?: 'seconds' | 'fraction') => void;
+  getCurrentTime: () => number;
+  getDuration: () => number;
+  getSecondsLoaded: () => number;
+}
+
 interface VideoPlayerProps {
   url: string;
   playing: boolean;
@@ -23,9 +30,9 @@ interface VideoPlayerProps {
 
 const playbackSpeeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
-const VideoPlayer = forwardRef<ReactPlayer, VideoPlayerProps>(
+const VideoPlayer = forwardRef<ReactPlayerInstance, VideoPlayerProps>(
   ({ url, playing, playbackRate, onPlayingChange, onTimeUpdate, onPlaybackRateChange }, ref) => {
-    const playerRef = useRef<ReactPlayer>(null);
+    const playerRef = useRef<ReactPlayerInstance>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [volume, setVolume] = useState(0.8);
     const [muted, setMuted] = useState(false);
@@ -35,7 +42,7 @@ const VideoPlayer = forwardRef<ReactPlayer, VideoPlayerProps>(
     const [showControls, setShowControls] = useState(true);
 
     // Expose the ReactPlayer ref to parent
-    useImperativeHandle(ref, () => playerRef.current as ReactPlayer);
+    useImperativeHandle(ref, () => playerRef.current as ReactPlayerInstance);
 
     const handleProgress = (state: any) => {
       if (!seeking) {
@@ -92,6 +99,14 @@ const VideoPlayer = forwardRef<ReactPlayer, VideoPlayerProps>(
       }
     };
 
+    const handleError = (error: any) => {
+      // Suppress benign browser media API errors
+      if (error?.message?.includes('interrupted')) {
+        return;
+      }
+      console.error('Video player error:', error);
+    };
+
     return (
       <Card
         ref={containerRef}
@@ -104,14 +119,15 @@ const VideoPlayer = forwardRef<ReactPlayer, VideoPlayerProps>(
       >
         <div className="relative aspect-video">
           <ReactPlayer
-            ref={playerRef}
+            ref={playerRef as any}
             url={url}
             playing={playing}
             volume={volume}
             muted={muted}
             playbackRate={playbackRate}
             onProgress={handleProgress}
-            onDuration={(dur) => setDuration(dur)}
+            onDurationChange={setDuration as any}
+            onError={handleError}
             width="100%"
             height="100%"
             progressInterval={100}

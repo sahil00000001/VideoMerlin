@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import ReactPlayer from "react-player";
 import { sampleVideoData, type VideoData, type TimelineSegment, type TranscriptLine } from "@shared/schema";
 import VideoUpload from "@/components/VideoUpload";
 import VideoPlayer from "@/components/VideoPlayer";
@@ -13,13 +12,20 @@ import { Download, Share2, Clock, Loader2, Upload as UploadIcon } from "lucide-r
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
 
+interface ReactPlayerInstance {
+  seekTo: (amount: number, type?: 'seconds' | 'fraction') => void;
+  getCurrentTime: () => number;
+  getDuration: () => number;
+  getSecondsLoaded: () => number;
+}
+
 export default function VideoManager() {
   const [selectedVideoId, setSelectedVideoId] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [showUpload, setShowUpload] = useState(false);
-  const playerRef = useRef<ReactPlayer>(null);
+  const playerRef = useRef<ReactPlayerInstance>(null);
   const { toast } = useToast();
 
   // Fetch all videos from backend

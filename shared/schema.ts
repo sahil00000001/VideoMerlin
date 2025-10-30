@@ -17,6 +17,23 @@ export const insertUserSchema = createInsertSchema(users).pick({
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
+export const videos = pgTable("videos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  videoUrl: text("video_url").notNull(),
+  videoName: text("video_name").notNull(),
+  duration: integer("duration").notNull(),
+  uploadedAt: text("uploaded_at").notNull(),
+  segments: jsonb("segments").notNull().$type<TimelineSegment[]>(),
+  transcript: jsonb("transcript").notNull().$type<TranscriptLine[]>(),
+  analysis: jsonb("analysis").notNull().$type<VideoAnalysis>(),
+});
+
+export const insertVideoSchema = createInsertSchema(videos).omit({
+  id: true,
+});
+
+export type InsertVideo = z.infer<typeof insertVideoSchema>;
+
 // Video Analysis Schema
 export interface TranscriptLine {
   speaker: string;
