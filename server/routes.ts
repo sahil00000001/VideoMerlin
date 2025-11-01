@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import multer from "multer";
 import { storage } from "./storage";
 import path from "path";
-import { sampleVideoData } from "@shared/schema";
+import { transcribeVideo } from "./transcription";
 
 // Configure multer for video uploads
 const upload = multer({
@@ -65,29 +65,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "No video file provided" });
       }
 
-      // In a real implementation, this would:
-      // 1. Extract audio from video
-      // 2. Send to transcription API (e.g., Whisper, AssemblyAI)
-      // 3. Perform speaker diarization
-      // 4. Send transcript to AI for analysis (OpenAI, Anthropic)
-      // 5. Generate timeline segments based on topic analysis
+      const videoPath = req.file.path;
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      const videoUrl = `${baseUrl}/uploads/${req.file.filename}`;
       
-      // For now, we'll return sample data structure
-      const videoUrl = `/uploads/${req.file.filename}`;
+      console.log(`Processing video: ${req.file.originalname}`);
+      
+      // Extract audio, transcribe, and analyze the video
+      const { transcript, duration, segments, analysis } = await transcribeVideo(videoPath);
       
       const newVideo = await storage.createVideo({
         videoUrl,
         videoName: req.file.originalname,
-        duration: 596, // Would be extracted from actual video
+        duration,
         uploadedAt: new Date(),
-        segments: sampleVideoData.segments,
-        transcript: sampleVideoData.transcript,
-        analysis: sampleVideoData.analysis,
+        segments,
+        transcript,
+        analysis,
       });
 
       res.json(newVideo);
     } catch (error) {
       console.error('Upload error:', error);
+      
+      // Clean up uploaded video file on failure
+      if (req.file) {
+        try {
+          const fs = await import('fs');
+          if (fs.existsSync(req.file.path)) {
+            fs.unlinkSync(req.file.path);
+          }
+        } catch (cleanupErr) {
+          console.error('Failed to cleanup uploaded file:', cleanupErr);
+        }
+      }
+      
       res.status(500).json({ error: "Failed to process video upload" });
     }
   });
