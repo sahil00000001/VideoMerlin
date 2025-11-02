@@ -28,12 +28,25 @@ export async function extractAudioFromVideo(videoPath: string): Promise<string> 
   const audioPath = videoPath.replace(path.extname(videoPath), '.mp3');
   
   return new Promise((resolve, reject) => {
+    console.log('[TRANSCRIPTION] Starting audio extraction...');
     ffmpeg(videoPath)
       .output(audioPath)
       .audioCodec('libmp3lame')
       .audioBitrate('128k')
-      .on('end', () => resolve(audioPath))
-      .on('error', (err: Error) => reject(err))
+      .on('start', (commandLine) => {
+        console.log('[TRANSCRIPTION] FFmpeg command:', commandLine);
+      })
+      .on('progress', (progress) => {
+        console.log('[TRANSCRIPTION] Audio extraction progress:', progress.percent ? `${progress.percent.toFixed(1)}%` : 'processing...');
+      })
+      .on('end', () => {
+        console.log('[TRANSCRIPTION] ✓ Audio extraction completed');
+        resolve(audioPath);
+      })
+      .on('error', (err: Error) => {
+        console.error('[TRANSCRIPTION] ✗ Audio extraction failed:', err.message);
+        reject(err);
+      })
       .run();
   });
 }
@@ -56,16 +69,26 @@ export async function transcribeVideo(videoPath: string): Promise<TranscriptionR
     throw new Error('OPENAI_API_KEY is not configured. Please add your OpenAI API key to enable transcription.');
   }
   
+  const startTime = Date.now();
+  console.log('\n========================================');
+  console.log('[TRANSCRIPTION] Starting transcription process');
+  console.log('[TRANSCRIPTION] Video path:', videoPath);
+  console.log('========================================\n');
+  
   try {
     // Step 1: Extract audio from video
-    console.log('Extracting audio from video...');
+    console.log('[TRANSCRIPTION] STEP 1/5: Extracting audio from video...');
     const audioPath = await extractAudioFromVideo(videoPath);
+    console.log('[TRANSCRIPTION] ✓ Audio file created:', audioPath);
     
     // Step 2: Get video duration
+    console.log('[TRANSCRIPTION] STEP 2/5: Getting video duration...');
     const duration = await getVideoDuration(videoPath);
+    console.log(`[TRANSCRIPTION] ✓ Video duration: ${Math.floor(duration / 60)}m ${Math.floor(duration % 60)}s`);
     
     // Step 3: Transcribe audio using OpenAI Whisper
-    console.log('Transcribing audio with Whisper...');
+    console.log('[TRANSCRIPTION] STEP 3/5: Sending audio to OpenAI Whisper API...');
+    console.log('[TRANSCRIPTION] Note: This may take 1-3 minutes depending on audio length');
     const audioReadStream = fs.createReadStream(audioPath);
     
     const transcription = await openai.audio.transcriptions.create({
@@ -75,7 +98,10 @@ export async function transcribeVideo(videoPath: string): Promise<TranscriptionR
       timestamp_granularities: ["segment"]
     });
     
+    console.log(`[TRANSCRIPTION] ✓ Whisper transcription complete! Found ${transcription.segments?.length || 0} segments`);
+    
     // Step 4: Convert Whisper segments to TranscriptLine format
+    console.log('[TRANSCRIPTION] STEP 4/5: Processing transcript segments...');
     const transcript: TranscriptLine[] = (transcription.segments || []).map((segment: any, index: number) => ({
       speaker: `SPEAKER_${index % 2 === 0 ? '00' : '01'}`, // Simple speaker alternation
       text: segment.text.trim(),
@@ -83,20 +109,31 @@ export async function transcribeVideo(videoPath: string): Promise<TranscriptionR
       end: segment.end,
       timestamp: segment.start
     }));
+    console.log(`[TRANSCRIPTION] ✓ Processed ${transcript.length} transcript lines`);
     
     // Step 5: Generate AI analysis using GPT
-    console.log('Analyzing transcript with AI...');
+    console.log('[TRANSCRIPTION] STEP 5/5: Analyzing transcript with GPT-5...');
+    console.log('[TRANSCRIPTION] Note: AI analysis may take 30-60 seconds');
     const analysis = await analyzeTranscript(transcript, transcription.text);
+    console.log('[TRANSCRIPTION] ✓ AI analysis complete');
     
     // Step 6: Generate timeline segments from analysis
+    console.log('[TRANSCRIPTION] Generating timeline segments...');
     const segments = generateTimelineSegments(transcript, analysis);
+    console.log(`[TRANSCRIPTION] ✓ Created ${segments.length} timeline segments`);
     
     // Cleanup audio file
     try {
       fs.unlinkSync(audioPath);
+      console.log('[TRANSCRIPTION] ✓ Cleaned up temporary audio file');
     } catch (err) {
-      console.error('Failed to delete temporary audio file:', err);
+      console.error('[TRANSCRIPTION] ⚠ Failed to delete temporary audio file:', err);
     }
+    
+    const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log('\n========================================');
+    console.log(`[TRANSCRIPTION] ✓✓✓ SUCCESS! Total time: ${totalTime}s`);
+    console.log('========================================\n');
     
     return {
       transcript,
@@ -105,7 +142,11 @@ export async function transcribeVideo(videoPath: string): Promise<TranscriptionR
       analysis
     };
   } catch (error) {
-    console.error('Transcription error:', error);
+    const totalTime = ((Date.now() - startTime) / 1000).toFixed(1);
+    console.log('\n========================================');
+    console.error(`[TRANSCRIPTION] ✗✗✗ FAILED after ${totalTime}s`);
+    console.error('[TRANSCRIPTION] Error:', error);
+    console.log('========================================\n');
     // Clean up audio file if it exists
     const audioPath = videoPath.replace(path.extname(videoPath), '.mp3');
     try {

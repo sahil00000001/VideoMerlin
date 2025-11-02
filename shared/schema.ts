@@ -21,11 +21,13 @@ export const videos = pgTable("videos", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   videoUrl: text("video_url").notNull(),
   videoName: text("video_name").notNull(),
-  duration: integer("duration").notNull(),
+  duration: integer("duration"),
   uploadedAt: text("uploaded_at").notNull(),
-  segments: jsonb("segments").notNull().$type<TimelineSegment[]>(),
-  transcript: jsonb("transcript").notNull().$type<TranscriptLine[]>(),
-  analysis: jsonb("analysis").notNull().$type<VideoAnalysis>(),
+  segments: jsonb("segments").$type<TimelineSegment[]>(),
+  transcript: jsonb("transcript").$type<TranscriptLine[]>(),
+  analysis: jsonb("analysis").$type<VideoAnalysis>(),
+  transcriptionStatus: text("transcription_status").notNull().default('pending'),
+  transcriptionError: text("transcription_error"),
 });
 
 export const insertVideoSchema = createInsertSchema(videos).omit({
@@ -71,11 +73,13 @@ export interface VideoData {
   id: string;
   videoUrl: string;
   videoName: string;
-  duration: number;
+  duration: number | null;
   uploadedAt: Date;
-  segments: TimelineSegment[];
-  transcript: TranscriptLine[];
-  analysis: VideoAnalysis;
+  segments: TimelineSegment[] | null;
+  transcript: TranscriptLine[] | null;
+  analysis: VideoAnalysis | null;
+  transcriptionStatus: string;
+  transcriptionError: string | null;
 }
 
 // Sample data for demonstration
@@ -85,6 +89,8 @@ export const sampleVideoData: VideoData = {
   videoName: "Beauty Consultation - Sarah Johnson.mp4",
   duration: 596,
   uploadedAt: new Date("2025-10-28"),
+  transcriptionStatus: 'completed',
+  transcriptionError: null,
   segments: [
     {
       topic: "Introduction & Client Assessment",

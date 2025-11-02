@@ -57,7 +57,7 @@ export default function VideoManager() {
   };
 
   const handleExportTranscript = () => {
-    if (!videoData) return;
+    if (!videoData || !videoData.transcript) return;
     
     const transcriptText = videoData.transcript
       .map(line => `[${formatTime(line.timestamp)}] ${line.speaker}: ${line.text}`)
@@ -98,14 +98,14 @@ export default function VideoManager() {
   };
 
   const getCurrentSegment = (): TimelineSegment | null => {
-    if (!videoData) return null;
+    if (!videoData || !videoData.segments) return null;
     return videoData.segments.find(
       seg => currentTime >= seg.startTime && currentTime < seg.endTime
     ) || null;
   };
 
   const getCurrentTranscriptLine = (): TranscriptLine | null => {
-    if (!videoData) return null;
+    if (!videoData || !videoData.transcript) return null;
     return videoData.transcript.find(
       line => currentTime >= line.start && currentTime < line.end
     ) || null;
@@ -162,7 +162,10 @@ export default function VideoManager() {
                 </h1>
                 {videoData && (
                   <p className="text-sm text-muted-foreground">
-                    Duration: {formatTime(videoData.duration)} • Uploaded {new Date(videoData.uploadedAt).toLocaleDateString()}
+                    {videoData.duration !== null && `Duration: ${formatTime(videoData.duration)} • `}
+                    Uploaded {new Date(videoData.uploadedAt).toLocaleDateString()}
+                    {videoData.transcriptionStatus === 'processing' && ' • Transcribing...'}
+                    {videoData.transcriptionStatus === 'failed' && ' • Transcription failed'}
                   </p>
                 )}
               </div>
@@ -179,15 +182,17 @@ export default function VideoManager() {
               </Button>
               {videoData && (
                 <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleExportTranscript}
-                    data-testid="button-export-transcript"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Export Transcript
-                  </Button>
+                  {videoData.transcript && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExportTranscript}
+                      data-testid="button-export-transcript"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Export Transcript
+                    </Button>
+                  )}
                   <Button
                     variant="outline"
                     size="sm"
@@ -230,42 +235,65 @@ export default function VideoManager() {
                 />
                 
                 {/* Timeline */}
-                <div className="mt-2">
-                  <Timeline
-                    segments={videoData.segments}
-                    currentTime={currentTime}
-                    duration={videoData.duration}
-                    onSegmentClick={seekToTime}
-                    activeSegment={getCurrentSegment()}
-                  />
-                </div>
+                {videoData.segments && videoData.duration && (
+                  <div className="mt-2">
+                    <Timeline
+                      segments={videoData.segments}
+                      currentTime={currentTime}
+                      duration={videoData.duration}
+                      onSegmentClick={seekToTime}
+                      activeSegment={getCurrentSegment()}
+                    />
+                  </div>
+                )}
+                {videoData.transcriptionStatus === 'processing' && (
+                  <div className="mt-2 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin text-yellow-600" />
+                      <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                        Transcribing audio and analyzing video... This may take a few minutes.
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {videoData.transcriptionStatus === 'failed' && videoData.transcriptionError && (
+                  <div className="mt-2 p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                    <p className="text-sm text-red-800 dark:text-red-200">
+                      Transcription failed: {videoData.transcriptionError}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Summary & Reports */}
-              <div className="space-y-4">
-                <SummaryCard
-                  summary={videoData.analysis.summary}
-                  highlights={videoData.analysis.highlights}
-                />
-                
-                <ReportTabs
-                  mainTopics={videoData.analysis.mainTopics}
-                  partialTopics={videoData.analysis.partialTopics}
-                  speakers={videoData.analysis.speakers}
-                  decisions={videoData.analysis.decisions}
-                />
-              </div>
+              {videoData.analysis && (
+                <div className="space-y-4">
+                  <SummaryCard
+                    summary={videoData.analysis.summary}
+                    highlights={videoData.analysis.highlights}
+                  />
+                  
+                  <ReportTabs
+                    mainTopics={videoData.analysis.mainTopics}
+                    partialTopics={videoData.analysis.partialTopics}
+                    speakers={videoData.analysis.speakers}
+                    decisions={videoData.analysis.decisions}
+                  />
+                </div>
+              )}
             </div>
 
             {/* Right Column - Transcript */}
-            <div className="lg:sticky lg:top-[88px] lg:self-start">
-              <TranscriptPanel
-                transcript={videoData.transcript}
-                currentTime={currentTime}
-                onLineClick={seekToTime}
-                currentLine={getCurrentTranscriptLine()}
-              />
-            </div>
+            {videoData.transcript && (
+              <div className="lg:sticky lg:top-[88px] lg:self-start">
+                <TranscriptPanel
+                  transcript={videoData.transcript}
+                  currentTime={currentTime}
+                  onLineClick={seekToTime}
+                  currentLine={getCurrentTranscriptLine()}
+                />
+              </div>
+            )}
           </div>
         </main>
       )}

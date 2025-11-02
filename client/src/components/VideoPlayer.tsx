@@ -32,7 +32,7 @@ const playbackSpeeds = [0.5, 0.75, 1, 1.25, 1.5, 2];
 
 const VideoPlayer = forwardRef<ReactPlayerInstance, VideoPlayerProps>(
   ({ url, playing, playbackRate, onPlayingChange, onTimeUpdate, onPlaybackRateChange }, ref) => {
-    const playerRef = useRef<ReactPlayerInstance>(null);
+    const playerRef = useRef<any>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [volume, setVolume] = useState(0.8);
     const [muted, setMuted] = useState(false);
@@ -42,12 +42,33 @@ const VideoPlayer = forwardRef<ReactPlayerInstance, VideoPlayerProps>(
     const [showControls, setShowControls] = useState(true);
 
     // Expose the ReactPlayer ref to parent
-    useImperativeHandle(ref, () => playerRef.current as ReactPlayerInstance);
+    useImperativeHandle(ref, () => ({
+      seekTo: (amount: number, type?: 'seconds' | 'fraction') => {
+        if (playerRef.current) {
+          playerRef.current.seekTo(amount, type);
+        }
+      },
+      getCurrentTime: () => {
+        return playerRef.current?.getCurrentTime() || 0;
+      },
+      getDuration: () => {
+        return playerRef.current?.getDuration() || 0;
+      },
+      getSecondsLoaded: () => {
+        return playerRef.current?.getSecondsLoaded() || 0;
+      }
+    }));
 
     const handleProgress = (state: any) => {
       if (!seeking) {
         setPlayed(state.played);
         onTimeUpdate(state.playedSeconds);
+      }
+      if (state.loadedSeconds > 0 && duration === 0) {
+        const currentDuration = playerRef.current?.getDuration();
+        if (currentDuration && currentDuration > 0) {
+          setDuration(currentDuration);
+        }
       }
     };
 
@@ -119,14 +140,19 @@ const VideoPlayer = forwardRef<ReactPlayerInstance, VideoPlayerProps>(
       >
         <div className="relative aspect-video">
           <ReactPlayer
-            ref={playerRef as any}
+            ref={playerRef}
             url={url}
             playing={playing}
             volume={volume}
             muted={muted}
             playbackRate={playbackRate}
             onProgress={handleProgress}
-            onDurationChange={setDuration as any}
+            onReady={() => {
+              const currentDuration = playerRef.current?.getDuration();
+              if (currentDuration && currentDuration > 0) {
+                setDuration(currentDuration);
+              }
+            }}
             onError={handleError}
             width="100%"
             height="100%"

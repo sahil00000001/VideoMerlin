@@ -71,20 +71,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Processing video: ${req.file.originalname}`);
       
-      // Extract audio, transcribe, and analyze the video
-      const { transcript, duration, segments, analysis } = await transcribeVideo(videoPath);
-      
+      // Create video entry immediately with pending status
       const newVideo = await storage.createVideo({
         videoUrl,
         videoName: req.file.originalname,
-        duration,
+        duration: null,
         uploadedAt: new Date(),
-        segments,
-        transcript,
-        analysis,
+        segments: null,
+        transcript: null,
+        analysis: null,
+        transcriptionStatus: 'processing',
+        transcriptionError: null,
       });
 
+      // Return the video immediately so user can see it
       res.json(newVideo);
+      
+      // Process transcription in the background
+      (async () => {
+        try {
+          const { transcript, duration, segments, analysis } = await transcribeVideo(videoPath);
+          
+          await storage.updateVideo(newVideo.id, {
+            duration,
+            segments,
+            transcript,
+            analysis,
+            transcriptionStatus: 'completed',
+            transcriptionError: null,
+          });
+          
+          console.log(`Successfully transcribed video: ${req.file!.originalname}`);
+        } catch (error) {
+          console.error('Transcription error:', error);
+          
+          const errorMessage = error instanceof Error ? error.message : 'Unknown transcription error';
+          
+          await storage.updateVideo(newVideo.id, {
+            transcriptionStatus: 'failed',
+            transcriptionError: errorMessage,
+          });
+        }
+      })();
+      
     } catch (error) {
       console.error('Upload error:', error);
       
@@ -127,6 +156,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true });
     } catch (error) {
       res.status(500).json({ error: "Failed to delete video" });
+    }
+  });
+
+  // Retry transcription for a video
+  app.post("/api/videos/:id/retry-transcription", async (req, res) => {
+    try {
+      const video = await storage.getVideo(req.params.id);
+      if (!video) {
+        return res.status(404).json({ error: "Video not found" });
+      }
+
+      // Extract filename from URL
+      const urlParts = video.videoUrl.split('/');
+      const filename = urlParts[urlParts.length - 1];
+      const videoPath = `uploads/${filename}`;
+
+      // Update status to processing
+      await storage.updateVideo(req.params.id, {
+        transcriptionStatus: 'processing',
+        transcriptionError: null,
+      });
+
+      res.json({ message: "Transcription started" });
+
+      // Process transcription in the background
+      (async () => {
+        try {
+          const { transcript, duration, segments, analysis } = await transcribeVideo(videoPath);
+          
+          await storage.updateVideo(req.params.id, {
+            duration,
+            segments,
+            transcript,
+            analysis,
+            transcriptionStatus: 'completed',
+            transcriptionError: null,
+          });
+          
+          console.log(`Successfully transcribed video: ${video.videoName}`);
+        } catch (error) {
+          console.error('Retry transcription error:', error);
+          
+          const errorMessage = error instanceof Error ? error.message : 'Unknown transcription error';
+          
+          await storage.updateVideo(req.params.id, {
+            transcriptionStatus: 'failed',
+            transcriptionError: errorMessage,
+          });
+        }
+      })();
+      
+    } catch (error) {
+      res.status(500).json({ error: "Failed to retry transcription" });
     }
   });
 
