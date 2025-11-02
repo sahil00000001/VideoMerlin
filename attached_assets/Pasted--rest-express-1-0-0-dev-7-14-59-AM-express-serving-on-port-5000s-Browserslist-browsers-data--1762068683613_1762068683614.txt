@@ -1,0 +1,75 @@
+
+> rest-express@1.0.0 dev
+7:14:59 AM [express] serving on port 5000s
+Browserslist: browsers data (caniuse-lite) is 13 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+7:15:05 AM [express] GET /api/videos 304 in 40ms :: [{"id":"9b38cf8f-7700-442e-a7fd-1f533e45ba19","v…
+Processing video: LeetCode Problem #13 Length of Last Word detailed solution ï½ Hindi.mp4
+
+========================================
+[TRANSCRIPTION] Starting transcription process
+[TRANSCRIPTION] Video path: uploads/video-1762067711481-41918567.mp4
+========================================
+
+[TRANSCRIPTION] STEP 1/5: Extracting audio from video...
+[TRANSCRIPTION] Starting audio extraction...
+7:15:15 AM [express] POST /api/videos/upload 200 in 3802ms :: {"id":"297998df-618f-4ffb-8dc1-0d04517…
+[TRANSCRIPTION] FFmpeg command: ffmpeg -i uploads/video-1762067711481-41918567.mp4 -y -acodec libmp3lame -b:a 128k uploads/video-1762067711481-41918567.mp3
+[TRANSCRIPTION] Audio extraction progress: 2.8%
+[TRANSCRIPTION] Audio extraction progress: 6.3%
+[TRANSCRIPTION] Audio extraction progress: 9.7%
+[TRANSCRIPTION] Audio extraction progress: 13.3%
+[TRANSCRIPTION] Audio extraction progress: 16.6%
+[TRANSCRIPTION] Audio extraction progress: 19.8%
+[TRANSCRIPTION] Audio extraction progress: 23.4%
+[TRANSCRIPTION] Audio extraction progress: 26.5%
+7:15:19 AM [express] GET /api/videos 200 in 4ms :: [{"id":"9b38cf8f-7700-442e-a7fd-1f533e45ba19","vi…
+[TRANSCRIPTION] Audio extraction progress: 30.0%
+[TRANSCRIPTION] Audio extraction progress: 33.0%
+[TRANSCRIPTION] Audio extraction progress: 36.5%
+[TRANSCRIPTION] Audio extraction progress: 39.7%
+[TRANSCRIPTION] Audio extraction progress: 43.3%
+[TRANSCRIPTION] Audio extraction progress: 46.6%
+[TRANSCRIPTION] Audio extraction progress: 50.1%
+[TRANSCRIPTION] Audio extraction progress: 53.5%
+[TRANSCRIPTION] Audio extraction progress: 57.0%
+[TRANSCRIPTION] Audio extraction progress: 60.1%
+[TRANSCRIPTION] Audio extraction progress: 63.6%
+[TRANSCRIPTION] Audio extraction progress: 66.7%
+[TRANSCRIPTION] Audio extraction progress: 69.8%
+[TRANSCRIPTION] Audio extraction progress: 73.2%
+[TRANSCRIPTION] Audio extraction progress: 76.3%
+[TRANSCRIPTION] Audio extraction progress: 79.6%
+[TRANSCRIPTION] Audio extraction progress: 82.9%
+[TRANSCRIPTION] Audio extraction progress: 86.3%
+[TRANSCRIPTION] Audio extraction progress: 89.3%
+[TRANSCRIPTION] Audio extraction progress: 92.8%
+[TRANSCRIPTION] Audio extraction progress: 95.8%
+[TRANSCRIPTION] Audio extraction progress: 98.7%
+[TRANSCRIPTION] Audio extraction progress: 100.0%
+[TRANSCRIPTION] ✓ Audio extraction completed
+[TRANSCRIPTION] ✓ Audio file created: uploads/video-1762067711481-41918567.mp3
+[TRANSCRIPTION] STEP 2/5: Getting video duration...
+[TRANSCRIPTION] ✓ Video duration: 4m 57s
+[TRANSCRIPTION] STEP 3/5: Sending audio to OpenAI Whisper API...
+[TRANSCRIPTION] Note: This may take 1-3 minutes depending on audio length
+^[[1;2B[TRANSCRIPTION] ✓ Whisper transcription complete! Found 54 segments
+[TRANSCRIPTION] STEP 4/5: Processing transcript segments...
+[TRANSCRIPTION] ✓ Processed 54 transcript lines
+[TRANSCRIPTION] STEP 5/5: Analyzing transcript with GPT-5...
+[TRANSCRIPTION] Note: AI analysis may take 30-60 seconds
+Analysis error: 429 You exceeded your current quota, please check your plan and billing details. For more information on this error, read the docs: https://platform.openai.com/docs/guides/error-codes/api-errors.
+[TRANSCRIPTION] ✓ AI analysis complete
+[TRANSCRIPTION] Generating timeline segments...
+[TRANSCRIPTION] ✓ Created 3 timeline segments
+[TRANSCRIPTION] ✓ Cleaned up temporary audio file
+
+========================================
+[TRANSCRIPTION] ✓✓✓ SUCCESS! Total time: 52.2s
+========================================
+
+Successfully transcribed video: LeetCode Problem #13 Length of Last Word detailed solution ï½ Hindi.mp4
+7:16:22 AM [express] GET /api/videos 200 in 29ms :: [{"id":"9b38cf8f-7700-442e-a7fd-1f533e45ba19","v…

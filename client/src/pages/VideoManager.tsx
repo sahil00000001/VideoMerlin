@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { sampleVideoData, type VideoData, type TimelineSegment, type TranscriptLine } from "@shared/schema";
+import { sampleVideoData, type VideoData, type TimelineSegment, type TranscriptLine, type VideoAnalysis } from "@shared/schema";
 import VideoUpload from "@/components/VideoUpload";
 import VideoPlayer from "@/components/VideoPlayer";
 import Timeline from "@/components/Timeline";
@@ -8,9 +8,10 @@ import TranscriptPanel from "@/components/TranscriptPanel";
 import SummaryCard from "@/components/SummaryCard";
 import ReportTabs from "@/components/ReportTabs";
 import { Button } from "@/components/ui/button";
-import { Download, Share2, Clock, Loader2, Upload as UploadIcon } from "lucide-react";
+import { Download, Share2, Clock, Loader2, Upload as UploadIcon, Sparkles } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Card } from "@/components/ui/card";
+import { analyzeTranscriptWithPuter } from "@/lib/puterAI";
 
 interface ReactPlayerInstance {
   seekTo: (amount: number, type?: 'seconds' | 'fraction') => void;
@@ -25,6 +26,8 @@ export default function VideoManager() {
   const [playing, setPlaying] = useState(false);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [showUpload, setShowUpload] = useState(false);
+  const [aiAnalysis, setAiAnalysis] = useState<Record<string, VideoAnalysis>>({});
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const playerRef = useRef<ReactPlayerInstance>(null);
   const { toast } = useToast();
 
@@ -95,6 +98,42 @@ export default function VideoManager() {
       title: "Video Uploaded",
       description: "Your video has been processed successfully.",
     });
+  };
+
+  const handleAnalyzeWithAI = async () => {
+    if (!videoData || !videoData.transcript) {
+      toast({
+        title: "No Transcript Available",
+        description: "Please wait for the video transcription to complete first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsAnalyzing(true);
+    try {
+      const fullText = videoData.transcript.map(line => line.text).join(' ');
+      const analysis = await analyzeTranscriptWithPuter(videoData.transcript, fullText);
+      
+      setAiAnalysis(prev => ({
+        ...prev,
+        [videoData.id]: analysis
+      }));
+
+      toast({
+        title: "Analysis Complete",
+        description: "AI has successfully analyzed your video transcript using Puter.js!",
+      });
+    } catch (error) {
+      console.error('AI Analysis error:', error);
+      toast({
+        title: "Analysis Failed",
+        description: error instanceof Error ? error.message : "Failed to analyze transcript. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const getCurrentSegment = (): TimelineSegment | null => {
@@ -183,15 +222,36 @@ export default function VideoManager() {
               {videoData && (
                 <>
                   {videoData.transcript && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleExportTranscript}
-                      data-testid="button-export-transcript"
-                    >
-                      <Download className="h-4 w-4 mr-2" />
-                      Export Transcript
-                    </Button>
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleAnalyzeWithAI}
+                        disabled={isAnalyzing}
+                        data-testid="button-analyze-ai"
+                      >
+                        {isAnalyzing ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Analyzing...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            Analyze with AI
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleExportTranscript}
+                        data-testid="button-export-transcript"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Export Transcript
+                      </Button>
+                    </>
                   )}
                   <Button
                     variant="outline"
@@ -266,18 +326,18 @@ export default function VideoManager() {
               </div>
 
               {/* Summary & Reports */}
-              {videoData.analysis && (
+              {(videoData.analysis || aiAnalysis[videoData.id]) && (
                 <div className="space-y-4">
                   <SummaryCard
-                    summary={videoData.analysis.summary}
-                    highlights={videoData.analysis.highlights}
+                    summary={(aiAnalysis[videoData.id] || videoData.analysis)?.summary || ""}
+                    highlights={(aiAnalysis[videoData.id] || videoData.analysis)?.highlights || []}
                   />
                   
                   <ReportTabs
-                    mainTopics={videoData.analysis.mainTopics}
-                    partialTopics={videoData.analysis.partialTopics}
-                    speakers={videoData.analysis.speakers}
-                    decisions={videoData.analysis.decisions}
+                    mainTopics={(aiAnalysis[videoData.id] || videoData.analysis)?.mainTopics || []}
+                    partialTopics={(aiAnalysis[videoData.id] || videoData.analysis)?.partialTopics || []}
+                    speakers={(aiAnalysis[videoData.id] || videoData.analysis)?.speakers || []}
+                    decisions={(aiAnalysis[videoData.id] || videoData.analysis)?.decisions || []}
                   />
                 </div>
               )}

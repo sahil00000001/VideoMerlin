@@ -111,6 +111,26 @@ export async function transcribeVideo(videoPath: string): Promise<TranscriptionR
     }));
     console.log(`[TRANSCRIPTION] ✓ Processed ${transcript.length} transcript lines`);
     
+    // Save transcript to file
+    console.log('[TRANSCRIPTION] Saving transcript to file...');
+    const videoFilename = path.basename(videoPath, path.extname(videoPath));
+    const transcriptFilePath = path.join('transcripts', `${videoFilename}.txt`);
+    const transcriptContent = `TRANSCRIPT - ${new Date().toISOString()}\n` +
+      `Video: ${videoFilename}\n` +
+      `Duration: ${Math.floor(duration / 60)}m ${Math.floor(duration % 60)}s\n` +
+      `Segments: ${transcript.length}\n` +
+      `${'='.repeat(80)}\n\n` +
+      `FULL TEXT:\n${transcription.text}\n\n` +
+      `${'='.repeat(80)}\n` +
+      `TIMESTAMPED SEGMENTS:\n\n` +
+      transcript.map((line, idx) => {
+        const timestamp = formatTime(line.start);
+        return `[${timestamp}] ${line.speaker}: ${line.text}`;
+      }).join('\n');
+    
+    fs.writeFileSync(transcriptFilePath, transcriptContent, 'utf-8');
+    console.log(`[TRANSCRIPTION] ✓ Transcript saved to: ${transcriptFilePath}`);
+    
     // Step 5: Generate AI analysis using GPT
     console.log('[TRANSCRIPTION] STEP 5/5: Analyzing transcript with GPT-5...');
     console.log('[TRANSCRIPTION] Note: AI analysis may take 30-60 seconds');
@@ -161,54 +181,16 @@ export async function transcribeVideo(videoPath: string): Promise<TranscriptionR
 }
 
 async function analyzeTranscript(transcript: TranscriptLine[], fullText: string): Promise<VideoAnalysis> {
-  try {
-    // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
-    const response = await openai.chat.completions.create({
-      model: "gpt-5",
-      messages: [
-        {
-          role: "system",
-          content: `You are an expert at analyzing conversation transcripts. Analyze the following transcript and provide insights in JSON format with these fields:
-- summary: A brief summary of the conversation (2-3 sentences)
-- highlights: Array of key highlights or important moments (3-5 items)
-- mainTopics: Array of main topics discussed, each with "name" and "icon" (use a simple text label or abbreviation for icon, not emoji)
-- partialTopics: Array of partially discussed topics, each with "name" and "reason" why it was only partial
-- speakers: Array of speaker info with "name" (e.g., "Consultant", "Client"), "role", and "speakingTime" (estimated in seconds)
-- decisions: Array of decisions made, each with "decision" and "actionItems" array
-
-Respond ONLY with valid JSON.`
-        },
-        {
-          role: "user",
-          content: fullText
-        }
-      ],
-      response_format: { type: "json_object" },
-      max_completion_tokens: 8192
-    });
-    
-    const result = JSON.parse(response.choices[0].message.content || '{}');
-    
-    return {
-      summary: result.summary || "No summary available",
-      highlights: result.highlights || [],
-      mainTopics: result.mainTopics || [],
-      partialTopics: result.partialTopics || [],
-      speakers: result.speakers || [],
-      decisions: result.decisions || []
-    };
-  } catch (error) {
-    console.error('Analysis error:', error instanceof Error ? error.message : error);
-    // Return default analysis if AI analysis fails
-    return {
-      summary: "Analysis not available",
-      highlights: [],
-      mainTopics: [],
-      partialTopics: [],
-      speakers: [],
-      decisions: []
-    };
-  }
+  // Skip OpenAI analysis - will be done on frontend with Puter.js (free, no quota limits)
+  console.log('[TRANSCRIPTION] ⚠ Skipping OpenAI GPT analysis (will use Puter.js on frontend)');
+  return {
+    summary: "AI analysis will be processed on frontend with Puter.js",
+    highlights: [],
+    mainTopics: [],
+    partialTopics: [],
+    speakers: [],
+    decisions: []
+  };
 }
 
 function generateTimelineSegments(transcript: TranscriptLine[], analysis: VideoAnalysis): TimelineSegment[] {
@@ -218,15 +200,30 @@ function generateTimelineSegments(transcript: TranscriptLine[], analysis: VideoA
   
   const colors = ['#E8F4F8', '#FFE5E5', '#FFF4E5', '#E8F8E8', '#F0E8F8'];
   const totalDuration = transcript[transcript.length - 1].end;
-  const numTopics = Math.min(analysis.mainTopics.length, 5) || 3;
-  const segmentDuration = totalDuration / numTopics;
+  
+  // Handle zero or very short duration
+  if (totalDuration <= 0) {
+    return [{
+      topic: 'Video Content',
+      description: 'Full video',
+      startTime: 0,
+      endTime: 0,
+      keywords: extractKeywords(transcript.map(line => line.text).join(' ')),
+      color: colors[0]
+    }];
+  }
+  
+  // Generate segments based on transcript, not AI analysis
+  // Divide into logical segments based on duration (e.g., every 2 minutes or 1/5 of total)
+  const targetSegmentDuration = Math.max(120, totalDuration / 5); // At least 2 min per segment
+  const numSegments = Math.max(1, Math.min(5, Math.ceil(totalDuration / targetSegmentDuration)));
+  const segmentDuration = totalDuration / numSegments;
   
   const segments: TimelineSegment[] = [];
   
-  for (let i = 0; i < numTopics; i++) {
+  for (let i = 0; i < numSegments; i++) {
     const startTime = i * segmentDuration;
     const endTime = Math.min((i + 1) * segmentDuration, totalDuration);
-    const topic = analysis.mainTopics[i];
     
     // Find transcript lines in this segment
     const segmentLines = transcript.filter(
@@ -237,8 +234,12 @@ function generateTimelineSegments(transcript: TranscriptLine[], analysis: VideoA
     const segmentText = segmentLines.map(line => line.text).join(' ');
     const keywords = extractKeywords(segmentText);
     
+    // Generate topic from keywords or use AI analysis if available
+    const topic = analysis.mainTopics[i]?.name || 
+                  (keywords.length > 0 ? keywords.slice(0, 2).join(' & ') : `Part ${i + 1}`);
+    
     segments.push({
-      topic: topic?.name || `Segment ${i + 1}`,
+      topic,
       description: `Discussion from ${formatTime(startTime)} to ${formatTime(endTime)}`,
       startTime: Math.floor(startTime),
       endTime: Math.floor(endTime),
